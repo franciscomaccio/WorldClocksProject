@@ -130,7 +130,7 @@ function fetchRate(type, symbol) {
     if (symbol === 'USD') {
         RATES[type] = 1; updateConvUI(); return;
     }
-    fetch(`https://api.frankfurter.app/latest?from=USD&symbols=${symbol}`)
+    fetch("https://open.er-api.com/v6/latest/USD")
         .then(r => r.json())
         .then(d => {
             if (d.rates && d.rates[symbol]) {
