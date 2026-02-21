@@ -59,26 +59,39 @@ function updateUI() {
 }
 
 // --- Settings Modal & Search ---
+// --- Settings Modal & Search ---
 const modal = document.getElementById('settings-modal'), sBtn = document.getElementById('settings-btn'), rBtn = document.getElementById('refresh-btn');
-rBtn.onclick = () => {
-    rBtn.classList.add('rotating');
-    refreshData();
-    setTimeout(() => rBtn.classList.remove('rotating'), 1000);
-};
-sBtn.onclick = () => {
-    modal.style.display = 'flex';
-    document.getElementById('origin-search').value = userSettings.origin.name;
-    document.getElementById('visit-search').value = userSettings.visit.name;
-    selOrigin = userSettings.origin; selVisit = userSettings.visit;
-};
-document.getElementById('close-settings').onclick = () => modal.style.display = 'none';
-document.getElementById('save-settings').onclick = async () => {
-    const { data: { user } } = await sb.auth.getUser();
-    await sb.from('user_locations').upsert({ user_id: user.id, origin: selOrigin, visit: selVisit, updated_at: new Date() });
-    userSettings = { origin: selOrigin, visit: selVisit };
-    modal.style.display = 'none';
-    updateUI();
-};
+
+if (rBtn) {
+    rBtn.onclick = () => {
+        rBtn.classList.add('rotating');
+        refreshData();
+        setTimeout(() => rBtn.classList.remove('rotating'), 1000);
+    };
+}
+
+if (sBtn) {
+    sBtn.onclick = () => {
+        modal.style.display = 'flex';
+        document.getElementById('origin-search').value = userSettings.origin.name;
+        document.getElementById('visit-search').value = userSettings.visit.name;
+        selOrigin = userSettings.origin; selVisit = userSettings.visit;
+    };
+}
+
+const closeS = document.getElementById('close-settings');
+if (closeS) closeS.onclick = () => modal.style.display = 'none';
+
+const saveS = document.getElementById('save-settings');
+if (saveS) {
+    saveS.onclick = async () => {
+        const { data: { user } } = await sb.auth.getUser();
+        await sb.from('user_locations').upsert({ user_id: user.id, origin: selOrigin, visit: selVisit, updated_at: new Date() });
+        userSettings = { origin: selOrigin, visit: selVisit };
+        modal.style.display = 'none';
+        updateUI();
+    };
+}
 
 const ISO_CURRENCY = {
     "AR": "ARS", "TH": "THB", "ES": "EUR", "US": "USD", "JP": "JPY", "GB": "GBP",
