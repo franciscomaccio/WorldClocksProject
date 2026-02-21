@@ -9,10 +9,11 @@ const msg = document.getElementById('auth-message'), loginF = document.getElemen
 
 // --- State ---
 let userSettings = {
-    origin: { name: "Córdoba", lat: -31.417, lon: -64.183, timezone: "America/Argentina/Buenos_Aires", currency: "ARS" },
-    visit: { name: "Bangkok", lat: 13.756, lon: 100.501, timezone: "Asia/Bangkok", currency: "THB" }
+    origin: { name: "Córdoba", country: "Argentina", lat: -31.417, lon: -64.183, timezone: "America/Argentina/Buenos_Aires", currency: "ARS" },
+    visit: { name: "Bangkok", country: "Thailand", lat: 13.756, lon: 100.501, timezone: "Asia/Bangkok", currency: "THB" }
 };
 let selOrigin = null, selVisit = null;
+let RATES = { origin: 1390, visit: 31 };
 
 // --- Auth Logic ---
 document.getElementById('show-signup').onclick = e => { e.preventDefault(); loginF.style.display = 'none'; signupF.style.display = 'block'; };
@@ -49,9 +50,10 @@ async function syncSettings() {
 
 function updateUI() {
     document.querySelector('.ar .city').innerText = userSettings.origin.name;
+    document.querySelector('.ar .location-tag').innerText = userSettings.origin.country || "Origen";
     document.querySelector('.th .city').innerText = userSettings.visit.name;
-    document.getElementById('rate-ar').innerText = 'USD/' + userSettings.origin.currency + ': --';
-    document.getElementById('rate-th').innerText = 'USD/' + userSettings.visit.currency + ': --';
+    document.querySelector('.th .location-tag').innerText = userSettings.visit.country || "Visita";
+
     document.getElementById('input-ars').placeholder = userSettings.origin.currency;
     document.getElementById('input-thb').placeholder = userSettings.visit.currency;
     refreshData();
@@ -74,6 +76,12 @@ document.getElementById('save-settings').onclick = async () => {
     updateUI();
 };
 
+const CURRENCY_MAP = {
+    "Argentina": "ARS", "Thailand": "THB", "Spain": "EUR", "United States": "USD", "Japan": "JPY",
+    "United Kingdom": "GBP", "France": "EUR", "Germany": "EUR", "Italy": "EUR", "Brazil": "BRL",
+    "Mexico": "MXN", "Canada": "CAD", "Australia": "AUD", "China": "CNY", "India": "INR"
+};
+
 function setupSearch(inpId, resId, type) {
     const inp = document.getElementById(inpId), res = document.getElementById(resId);
     let t;
@@ -88,7 +96,15 @@ function setupSearch(inpId, resId, type) {
                 const v = document.createElement('div'); v.className = 'search-item';
                 v.innerHTML = `${i.name} <span class="country">${i.country || ''}</span>`;
                 v.onclick = () => {
-                    const loc = { name: i.name, lat: i.latitude, lon: i.longitude, timezone: i.timezone, currency: 'USD' };
+                    const country = i.country || "";
+                    const loc = {
+                        name: i.name,
+                        country: country,
+                        lat: i.latitude,
+                        lon: i.longitude,
+                        timezone: i.timezone,
+                        currency: CURRENCY_MAP[country] || 'USD'
+                    };
                     if (type === 'origin') selOrigin = loc; else selVisit = loc;
                     inp.value = i.name; res.style.display = 'none';
                 };
@@ -103,13 +119,35 @@ setupSearch('visit-search', 'visit-results', 'visit');
 
 // --- Clocks & Data ---
 let timer;
-const RATES = { ARS: 1390, THB: 31 };
 
 function refreshData() {
     fetchW('ar', userSettings.origin.lat, userSettings.origin.lon);
     fetchW('th', userSettings.visit.lat, userSettings.visit.lon);
-    fetch('https://api.frankfurter.app/latest?from=USD&symbols=THB')
-        .then(r => r.json()).then(d => { if (d.rates.THB) { RATES.THB = d.rates.THB; initConv(); } });
+
+    // Fetch rates for both
+    fetchRate('origin', userSettings.origin.currency);
+    fetchRate('visit', userSettings.visit.currency);
+}
+
+function fetchRate(type, symbol) {
+    if (symbol === 'USD') {
+        RATES[type] = 1;
+        updateConvUI();
+        return;
+    }
+    fetch(`https://api.frankfurter.app/latest?from=USD&symbols=${symbol}`)
+        .then(r => r.json())
+        .then(d => {
+            if (d.rates && d.rates[symbol]) {
+                RATES[type] = d.rates[symbol];
+                updateConvUI();
+            }
+        }).catch(() => { });
+}
+
+function updateConvUI() {
+    document.getElementById('rate-ar').innerText = `USD/${userSettings.origin.currency}: ${RATES.origin}`;
+    document.getElementById('rate-th').innerText = `USD/${userSettings.visit.currency}: ${RATES.visit}`;
 }
 
 function fetchW(id, lat, lon) {
@@ -122,7 +160,7 @@ function fetchW(id, lat, lon) {
             i.innerText = getI(d.current_weather.weathercode, d.current_weather.is_day === 1);
             const loc = id === 'ar' ? userSettings.origin : userSettings.visit;
             b.onclick = () => window.open(`https://weather.com/es-US/tiempo/hoy/l/${loc.lat},${loc.lon}`, '_blank');
-        });
+        }).catch(() => { });
 }
 
 function getI(c, d) {
@@ -130,14 +168,9 @@ function getI(c, d) {
     if (c >= 51 && c <= 67) return '🌧️'; if (c >= 95) return '⛈️'; return '✨';
 }
 
-function initConv() {
-    document.getElementById('rate-ar').innerText = 'USD/' + userSettings.origin.currency + ': ' + RATES.ARS;
-    document.getElementById('rate-th').innerText = 'USD/' + userSettings.visit.currency + ': ' + RATES.THB;
-}
-
 const iA = document.getElementById('input-ars'), iT = document.getElementById('input-thb');
-iA.oninput = e => iT.value = ((parseFloat(e.target.value) || 0) / RATES.ARS * RATES.THB).toFixed(2);
-iT.oninput = e => iA.value = ((parseFloat(e.target.value) || 0) / RATES.THB * RATES.ARS).toFixed(2);
+iA.oninput = e => iT.value = ((parseFloat(e.target.value) || 0) / RATES.origin * RATES.visit).toFixed(2);
+iT.oninput = e => iA.value = ((parseFloat(e.target.value) || 0) / RATES.visit * RATES.origin).toFixed(2);
 
 function update() {
     const now = new Date();
@@ -150,11 +183,12 @@ function update() {
 }
 
 sb.auth.onAuthStateChange((ev, sess) => {
-    if (sess) { authS.style.display = 'none'; appS.style.display = 'block'; syncSettings(); timer = setInterval(update, 1000); }
-    else { appS.style.display = 'block'; appS.style.display = 'none'; authS.style.display = 'block'; clearInterval(timer); }
+    if (sess) { authS.style.display = 'none'; appS.style.display = 'block'; syncSettings(); update(); timer = setInterval(update, 1000); }
+    else { appS.style.display = 'none'; authS.style.display = 'block'; clearInterval(timer); }
 });
 
 document.addEventListener('mousemove', e => {
+    if (appS.style.display === 'none') return;
     const x = (e.clientX / window.innerWidth - 0.5) * 15, y = (e.clientY / window.innerHeight - 0.5) * 15;
     document.querySelectorAll('.clock-card').forEach(c => c.style.transform = `translateY(${y}px) rotateX(${-y / 2}deg) rotateY(${x / 2}deg)`);
 });
