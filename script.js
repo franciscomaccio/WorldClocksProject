@@ -133,22 +133,22 @@ const EXCHANGE_RATES = {
 };
 
 const WEATHER_LINKS = {
-    AR: 'https://weather.com/weather/today/l/Cordoba+Argentina?canonicalCityId=17e76c167b0dcba641f6e6259f63588961726759c836ec276e069c9b47e85c29',
-    TH: 'https://weather.com/weather/today/l/Bangkok+Thailand?canonicalCityId=6e81498b30d3dce0e633d6796245f09627797e883e4a2e584cc1d8487b22a07c'
+    AR: 'https://weather.com/es-US/tiempo/hoy/l/4dd766de52d855ef5c5df5fabeab68ef7fcdb0e705dcc33852c52f3aa7dbbf43',
+    TH: 'https://weather.com/es-US/tiempo/hoy/l/940d0fe0b32980dbe2dceb7c6eea4bb633a96a1de302c4f04d396bfe8b66e214'
 };
 
 async function fetchWeather() {
     console.log('Fetching weather data...');
-    // Córdoba, AR (-31.4135, -64.1811)
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=-31.41&longitude=-64.18&current_weather=true')
+    // Córdoba, AR (-31.417, -64.183) - Higher precision
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=-31.417&longitude=-64.183&current_weather=true')
         .then(res => res.json())
         .then(data => {
             if (data.current_weather) updateWeatherUI('ar', data.current_weather);
         })
         .catch(e => console.error('Error AR weather:', e));
 
-    // Bangkok, TH (13.7563, 100.5018)
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=13.75&longitude=100.51&current_weather=true')
+    // Bangkok, TH (13.756, 100.501) - Higher precision
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=13.756&longitude=100.501&current_weather=true')
         .then(res => res.json())
         .then(data => {
             if (data.current_weather) updateWeatherUI('th', data.current_weather);
