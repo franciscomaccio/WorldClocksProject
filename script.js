@@ -59,7 +59,12 @@ function updateUI() {
 }
 
 // --- Settings Modal & Search ---
-const modal = document.getElementById('settings-modal'), sBtn = document.getElementById('settings-btn');
+const modal = document.getElementById('settings-modal'), sBtn = document.getElementById('settings-btn'), rBtn = document.getElementById('refresh-btn');
+rBtn.onclick = () => {
+    rBtn.classList.add('rotating');
+    refreshData();
+    setTimeout(() => rBtn.classList.remove('rotating'), 1000);
+};
 sBtn.onclick = () => {
     modal.style.display = 'flex';
     document.getElementById('origin-search').value = userSettings.origin.name;
