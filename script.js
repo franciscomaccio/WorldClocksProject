@@ -13,7 +13,7 @@ let userSettings = {
     visit: { name: "Bangkok", country: "Thailand", lat: 13.756, lon: 100.501, timezone: "Asia/Bangkok", currency: "THB" }
 };
 let selOrigin = null, selVisit = null;
-let RATES = { origin: 1390, visit: 31 };
+let RATES = { origin: 1000, visit: 31 }; // Default approx
 
 // --- Auth Logic ---
 document.getElementById('show-signup').onclick = e => { e.preventDefault(); loginF.style.display = 'none'; signupF.style.display = 'block'; };
@@ -32,7 +32,6 @@ signupF.onsubmit = async e => {
     const { error } = await sb.auth.signUp({ email: signupF[0].value, password: signupF[1].value });
     msg.innerText = error ? error.message : "Revisa tu email para confirmar.";
 };
-
 document.getElementById('logout-btn').onclick = () => sb.auth.signOut();
 
 // --- DB Sync ---
@@ -76,10 +75,10 @@ document.getElementById('save-settings').onclick = async () => {
     updateUI();
 };
 
-const CURRENCY_MAP = {
-    "Argentina": "ARS", "Thailand": "THB", "Spain": "EUR", "United States": "USD", "Japan": "JPY",
-    "United Kingdom": "GBP", "France": "EUR", "Germany": "EUR", "Italy": "EUR", "Brazil": "BRL",
-    "Mexico": "MXN", "Canada": "CAD", "Australia": "AUD", "China": "CNY", "India": "INR"
+const ISO_CURRENCY = {
+    "AR": "ARS", "TH": "THB", "ES": "EUR", "US": "USD", "JP": "JPY", "GB": "GBP",
+    "FR": "EUR", "DE": "EUR", "IT": "EUR", "BR": "BRL", "MX": "MXN", "CA": "CAD",
+    "AU": "AUD", "CN": "CNY", "IN": "INR", "CH": "CHF", "UY": "UYU", "CL": "CLP"
 };
 
 function setupSearch(inpId, resId, type) {
@@ -96,14 +95,14 @@ function setupSearch(inpId, resId, type) {
                 const v = document.createElement('div'); v.className = 'search-item';
                 v.innerHTML = `${i.name} <span class="country">${i.country || ''}</span>`;
                 v.onclick = () => {
-                    const country = i.country || "";
+                    const country = i.country || "Origen";
                     const loc = {
                         name: i.name,
                         country: country,
                         lat: i.latitude,
                         lon: i.longitude,
                         timezone: i.timezone,
-                        currency: CURRENCY_MAP[country] || 'USD'
+                        currency: ISO_CURRENCY[i.country_code] || 'USD'
                     };
                     if (type === 'origin') selOrigin = loc; else selVisit = loc;
                     inp.value = i.name; res.style.display = 'none';
@@ -123,17 +122,13 @@ let timer;
 function refreshData() {
     fetchW('ar', userSettings.origin.lat, userSettings.origin.lon);
     fetchW('th', userSettings.visit.lat, userSettings.visit.lon);
-
-    // Fetch rates for both
     fetchRate('origin', userSettings.origin.currency);
     fetchRate('visit', userSettings.visit.currency);
 }
 
 function fetchRate(type, symbol) {
     if (symbol === 'USD') {
-        RATES[type] = 1;
-        updateConvUI();
-        return;
+        RATES[type] = 1; updateConvUI(); return;
     }
     fetch(`https://api.frankfurter.app/latest?from=USD&symbols=${symbol}`)
         .then(r => r.json())
@@ -146,16 +141,17 @@ function fetchRate(type, symbol) {
 }
 
 function updateConvUI() {
-    document.getElementById('rate-ar').innerText = `USD/${userSettings.origin.currency}: ${RATES.origin}`;
-    document.getElementById('rate-th').innerText = `USD/${userSettings.visit.currency}: ${RATES.visit}`;
+    document.getElementById('rate-ar').innerText = `USD/${userSettings.origin.currency}: ${RATES.origin.toFixed(2)}`;
+    document.getElementById('rate-th').innerText = `USD/${userSettings.visit.currency}: ${RATES.visit.toFixed(2)}`;
 }
 
 function fetchW(id, lat, lon) {
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
         .then(r => r.json()).then(d => {
             const b = document.getElementById('weather-' + id), i = document.getElementById('icon-' + id);
+            if (!b || !i) return;
             b.querySelector('.weather-temp').innerText = Math.round(d.current_weather.temperature) + '°C';
-            const codes = { 0: 'Despejado', 1: 'Despejado', 2: 'Nublado', 3: 'Nublado', 45: 'Niebla', 51: 'Llovizna', 61: 'Lluvia', 95: 'Tormenta' };
+            const codes = { 0: 'Despejado', 1: 'Parcialmente despejado', 2: 'Nublado', 3: 'Nublado', 45: 'Niebla', 51: 'Llovizna', 61: 'Lluvia', 95: 'Tormenta' };
             b.querySelector('.weather-desc').innerText = codes[d.current_weather.weathercode] || 'Estable';
             i.innerText = getI(d.current_weather.weathercode, d.current_weather.is_day === 1);
             const loc = id === 'ar' ? userSettings.origin : userSettings.visit;
@@ -183,8 +179,8 @@ function update() {
 }
 
 sb.auth.onAuthStateChange((ev, sess) => {
-    if (sess) { authS.style.display = 'none'; appS.style.display = 'block'; syncSettings(); update(); timer = setInterval(update, 1000); }
-    else { appS.style.display = 'none'; authS.style.display = 'block'; clearInterval(timer); }
+    if (sess) { authS.style.display = 'none'; appS.style.display = 'block'; syncSettings(); update(); if (!timer) timer = setInterval(update, 1000); }
+    else { authS.style.display = 'block'; appS.style.display = 'none'; clearInterval(timer); timer = null; }
 });
 
 document.addEventListener('mousemove', e => {
