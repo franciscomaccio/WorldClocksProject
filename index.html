@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Clocks | Argentina & Thailand</title>
+    <meta name="description" content="Relojes mundiales modernos para Argentina y Tailandia">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <main class="container">
+        <header>
+            <h1>World Clocks</h1>
+            <p>Sincronización global en tiempo real</p>
+        </header>
+        
+        <div class="clocks-grid">
+            <!-- Argentina Clock -->
+            <div class="clock-card ar" id="card-ar">
+                <div class="card-content">
+                    <span class="location-tag">Argentina</span>
+                    <h2 class="city">Buenos Aires</h2>
+                    <div class="time-display" id="time-ar">00:00:00</div>
+                    <div class="date-display" id="date-ar">Cargando...</div>
+                </div>
+            </div>
+
+            <!-- Thailand Clock -->
+            <div class="clock-card th" id="card-th">
+                <div class="card-content">
+                    <span class="location-tag">Thailand</span>
+                    <h2 class="city">Bangkok</h2>
+                    <div class="time-display" id="time-th">00:00:00</div>
+                    <div class="date-display" id="date-th">Cargando...</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Desarrollado con ❤️ para una experiencia moderna</p>
+        </footer>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
