@@ -14,8 +14,40 @@
 
 <body>
     <div class="bg-gradient"></div>
-    <main class="container">
+
+    <!-- Auth Section -->
+    <section id="auth-section" class="container">
         <header>
+            <h1>World Clocks</h1>
+            <p>Inicia sesión para acceder a tus relojes mundiales</p>
+        </header>
+
+        <div class="auth-card">
+            <div id="auth-forms">
+                <form id="login-form">
+                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="password" id="login-password" placeholder="Contraseña" required>
+                    <button type="submit" class="btn-primary">Iniciar Sesión</button>
+                    <p class="toggle-text">¿No tienes cuenta? <a href="#" id="show-signup">Regístrate</a></p>
+                </form>
+
+                <form id="signup-form" style="display: none;">
+                    <input type="email" id="signup-email" placeholder="Email" required>
+                    <input type="password" id="signup-password" placeholder="Contraseña" required>
+                    <button type="submit" class="btn-primary">Registrarse</button>
+                    <p class="toggle-text">¿Ya tienes cuenta? <a href="#" id="show-login">Inicia sesión</a></p>
+                </form>
+            </div>
+            <div id="auth-message" class="message"></div>
+        </div>
+    </section>
+
+    <!-- Main App Section (Hidden by default) -->
+    <main id="app-section" class="container" style="display: none;">
+        <header>
+            <div class="header-top">
+                <button id="logout-btn" class="btn-secondary">Cerrar Sesión</button>
+            </div>
             <h1>World Clocks</h1>
             <p>Sincronización global en tiempo real</p>
         </header>
@@ -46,6 +78,9 @@
             <p>Desarrollado con ❤️ para una experiencia moderna</p>
         </footer>
     </main>
+
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
 </body>
 
