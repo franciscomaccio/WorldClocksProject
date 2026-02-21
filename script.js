@@ -158,11 +158,32 @@ async function fetchWeather() {
 
 function updateWeatherUI(id, data) {
     const box = document.getElementById(`weather-${id}`);
-    if (!box) return;
-    box.querySelector('.weather-temp').textContent = `${Math.round(data.temperature)}°C`;
-    const desc = getWeatherDesc(data.weathercode);
-    box.querySelector('.weather-desc').textContent = desc;
+    const iconEl = document.getElementById(`icon-${id}`);
+    if (!box || !iconEl) return;
+
+    const temp = Math.round(data.temperature);
+    const code = data.weathercode;
+    const isDay = data.is_day === 1;
+
+    box.querySelector('.weather-temp').textContent = `${temp}°C`;
+    box.querySelector('.weather-desc').textContent = getWeatherDesc(code);
+
+    // Set background icon
+    iconEl.textContent = getWeatherIcon(code, isDay);
+
     box.onclick = () => window.open(WEATHER_LINKS[id.toUpperCase()], '_blank');
+}
+
+function getWeatherIcon(code, isDay) {
+    // Mapping codes to Emojis (simplified)
+    if (code <= 1) return isDay ? '☀️' : '🌙'; // Clear
+    if (code <= 3) return '☁️'; // Partly cloudy / Cloudy
+    if (code >= 45 && code <= 48) return '🌫️'; // Fog
+    if (code >= 51 && code <= 67) return '🌧️'; // Rain
+    if (code >= 71 && code <= 77) return '❄️'; // Snow
+    if (code >= 80 && code <= 82) return '🌦️'; // Showers
+    if (code >= 95) return '⛈️'; // Storm
+    return '✨';
 }
 
 function getWeatherDesc(code) {
