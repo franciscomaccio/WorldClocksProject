@@ -274,3 +274,85 @@ input:focus {
 .success {
     color: #2ecc71;
 }
+
+/* Dashboard Enhancements */
+.card-extra {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.weather-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+    transition: transform 0.3s;
+    padding: 1rem;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.weather-box:hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.weather-temp {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.weather-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.currency-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.currency-rate {
+    font-size: 0.85rem;
+    color: var(--accent-ar);
+    font-weight: 600;
+}
+
+.th .currency-rate {
+    color: var(--accent-th);
+}
+
+.converter-input {
+    position: relative;
+}
+
+.conv-input {
+    margin-bottom: 0 !important;
+    text-align: center;
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.conv-input:focus {
+    border-color: white !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+}
