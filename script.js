@@ -1,250 +1,160 @@
 // Supabase Configuration
 const SUPABASE_URL = 'https://czjhlxnypntpbmxispox.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6amhseG55cG50cGJteGlzcG94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA2MDQsImV4cCI6MjA4NzI2NjYwNH0.Vc_vxRE9LWohrKPQAGiBGP6w6Mj_pUMC63u40aWVl9E';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // UI Elements
-const authSection = document.getElementById('auth-section');
-const appSection = document.getElementById('app-section');
-const loginForm = document.getElementById('login-form');
-const signupForm = document.getElementById('signup-form');
-const authMessage = document.getElementById('auth-message');
-const logoutBtn = document.getElementById('logout-btn');
+const authS = document.getElementById('auth-section'), appS = document.getElementById('app-section');
+const msg = document.getElementById('auth-message'), loginF = document.getElementById('login-form'), signupF = document.getElementById('signup-form');
+
+// --- State ---
+let userSettings = {
+    origin: { name: "Córdoba", lat: -31.417, lon: -64.183, timezone: "America/Argentina/Buenos_Aires", currency: "ARS" },
+    visit: { name: "Bangkok", lat: 13.756, lon: 100.501, timezone: "Asia/Bangkok", currency: "THB" }
+};
+let selOrigin = null, selVisit = null;
 
 // --- Auth Logic ---
+document.getElementById('show-signup').onclick = e => { e.preventDefault(); loginF.style.display = 'none'; signupF.style.display = 'block'; };
+document.getElementById('show-login').onclick = e => { e.preventDefault(); signupF.style.display = 'none'; loginF.style.display = 'block'; };
 
-// Switch Forms
-document.getElementById('show-signup').addEventListener('click', (e) => {
+loginF.onsubmit = async e => {
     e.preventDefault();
-    loginForm.style.display = 'none';
-    signupForm.style.display = 'block';
-});
+    msg.innerText = 'Cargando...';
+    const { error } = await sb.auth.signInWithPassword({ email: loginF[0].value, password: loginF[1].value });
+    if (error) msg.innerText = error.message;
+};
 
-document.getElementById('show-login').addEventListener('click', (e) => {
+signupF.onsubmit = async e => {
     e.preventDefault();
-    signupForm.style.display = 'none';
-    loginForm.style.display = 'block';
-});
+    msg.innerText = 'Registrando...';
+    const { error } = await sb.auth.signUp({ email: signupF[0].value, password: signupF[1].value });
+    msg.innerText = error ? error.message : "Revisa tu email para confirmar.";
+};
 
-// Login
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    authMessage.textContent = 'Iniciando sesión...';
+document.getElementById('logout-btn').onclick = () => sb.auth.signOut();
 
-    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
-    if (error) {
-        authMessage.textContent = error.message;
-        authMessage.className = 'message error';
+// --- DB Sync ---
+async function syncSettings() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    const { data } = await sb.from('user_locations').select('*').eq('user_id', user.id).single();
+    if (data) {
+        userSettings = { origin: data.origin, visit: data.visit };
     } else {
-        authMessage.textContent = '¡Bienvenido!';
-        authMessage.className = 'message success';
+        await sb.from('user_locations').insert([{ user_id: user.id, origin: userSettings.origin, visit: userSettings.visit }]);
     }
-});
+    updateUI();
+}
 
-// Signup
-signupForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('signup-email').value;
-    const password = document.getElementById('signup-password').value;
-    authMessage.textContent = 'Registrando...';
+function updateUI() {
+    document.querySelector('.ar .city').innerText = userSettings.origin.name;
+    document.querySelector('.th .city').innerText = userSettings.visit.name;
+    document.getElementById('rate-ar').innerText = 'USD/' + userSettings.origin.currency + ': --';
+    document.getElementById('rate-th').innerText = 'USD/' + userSettings.visit.currency + ': --';
+    document.getElementById('input-ars').placeholder = userSettings.origin.currency;
+    document.getElementById('input-thb').placeholder = userSettings.visit.currency;
+    refreshData();
+}
 
-    const { data, error } = await supabaseClient.auth.signUp({ email, password });
+// --- Settings Modal & Search ---
+const modal = document.getElementById('settings-modal'), sBtn = document.getElementById('settings-btn');
+sBtn.onclick = () => {
+    modal.style.display = 'flex';
+    document.getElementById('origin-search').value = userSettings.origin.name;
+    document.getElementById('visit-search').value = userSettings.visit.name;
+    selOrigin = userSettings.origin; selVisit = userSettings.visit;
+};
+document.getElementById('close-settings').onclick = () => modal.style.display = 'none';
+document.getElementById('save-settings').onclick = async () => {
+    const { data: { user } } = await sb.auth.getUser();
+    await sb.from('user_locations').upsert({ user_id: user.id, origin: selOrigin, visit: selVisit, updated_at: new Date() });
+    userSettings = { origin: selOrigin, visit: selVisit };
+    modal.style.display = 'none';
+    updateUI();
+};
 
-    if (error) {
-        authMessage.textContent = error.message;
-        authMessage.className = 'message error';
-    } else {
-        authMessage.textContent = 'Registro exitoso. Revisa tu email para confirmar tu cuenta.';
-        authMessage.className = 'message success';
-    }
-});
+function setupSearch(inpId, resId, type) {
+    const inp = document.getElementById(inpId), res = document.getElementById(resId);
+    let t;
+    inp.oninput = e => {
+        clearTimeout(t);
+        if (e.target.value.length < 3) { res.style.display = 'none'; return; }
+        t = setTimeout(async () => {
+            const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${e.target.value}&count=5&language=es&format=json`);
+            const d = await r.json();
+            res.innerHTML = '';
+            (d.results || []).forEach(i => {
+                const v = document.createElement('div'); v.className = 'search-item';
+                v.innerHTML = `${i.name} <span class="country">${i.country || ''}</span>`;
+                v.onclick = () => {
+                    const loc = { name: i.name, lat: i.latitude, lon: i.longitude, timezone: i.timezone, currency: 'USD' };
+                    if (type === 'origin') selOrigin = loc; else selVisit = loc;
+                    inp.value = i.name; res.style.display = 'none';
+                };
+                res.appendChild(v);
+            });
+            res.style.display = 'block';
+        }, 300);
+    };
+}
+setupSearch('origin-search', 'origin-results', 'origin');
+setupSearch('visit-search', 'visit-results', 'visit');
 
-// Logout
-logoutBtn.addEventListener('click', async () => {
-    await supabaseClient.auth.signOut();
-});
+// --- Clocks & Data ---
+let timer;
+const RATES = { ARS: 1390, THB: 31 };
 
-// Auth State Observer
-supabaseClient.auth.onAuthStateChange((event, session) => {
-    if (session) {
-        authSection.style.display = 'none';
-        appSection.style.display = 'block';
-        startClockUpdates();
-        updateRates();
-        fetchWeather();
-    } else {
-        appSection.style.display = 'none';
-        authSection.style.display = 'block';
-        stopClockUpdates();
-    }
-});
+function refreshData() {
+    fetchW('ar', userSettings.origin.lat, userSettings.origin.lon);
+    fetchW('th', userSettings.visit.lat, userSettings.visit.lon);
+    fetch('https://api.frankfurter.app/latest?from=USD&symbols=THB')
+        .then(r => r.json()).then(d => { if (d.rates.THB) { RATES.THB = d.rates.THB; initConv(); } });
+}
 
-// --- Clock Logic ---
+function fetchW(id, lat, lon) {
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+        .then(r => r.json()).then(d => {
+            const b = document.getElementById('weather-' + id), i = document.getElementById('icon-' + id);
+            b.querySelector('.weather-temp').innerText = Math.round(d.current_weather.temperature) + '°C';
+            const codes = { 0: 'Despejado', 1: 'Despejado', 2: 'Nublado', 3: 'Nublado', 45: 'Niebla', 51: 'Llovizna', 61: 'Lluvia', 95: 'Tormenta' };
+            b.querySelector('.weather-desc').innerText = codes[d.current_weather.weathercode] || 'Estable';
+            i.innerText = getI(d.current_weather.weathercode, d.current_weather.is_day === 1);
+            const loc = id === 'ar' ? userSettings.origin : userSettings.visit;
+            b.onclick = () => window.open(`https://weather.com/es-US/tiempo/hoy/l/${loc.lat},${loc.lon}`, '_blank');
+        });
+}
 
-let clockInterval;
+function getI(c, d) {
+    if (c <= 1) return d ? '☀️' : '🌙'; if (c <= 3) return '☁️'; if (c >= 45 && c <= 48) return '🌫️';
+    if (c >= 51 && c <= 67) return '🌧️'; if (c >= 95) return '⛈️'; return '✨';
+}
 
-function updateClocks() {
+function initConv() {
+    document.getElementById('rate-ar').innerText = 'USD/' + userSettings.origin.currency + ': ' + RATES.ARS;
+    document.getElementById('rate-th').innerText = 'USD/' + userSettings.visit.currency + ': ' + RATES.THB;
+}
+
+const iA = document.getElementById('input-ars'), iT = document.getElementById('input-thb');
+iA.oninput = e => iT.value = ((parseFloat(e.target.value) || 0) / RATES.ARS * RATES.THB).toFixed(2);
+iT.oninput = e => iA.value = ((parseFloat(e.target.value) || 0) / RATES.THB * RATES.ARS).toFixed(2);
+
+function update() {
     const now = new Date();
-
-    // Argentina Time (UTC-3)
-    const optionsAR = {
-        timeZone: 'America/Argentina/Buenos_Aires',
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-    };
-    const dateOptionsAR = {
-        timeZone: 'America/Argentina/Buenos_Aires',
-        weekday: 'long', day: 'numeric', month: 'long'
-    };
-
-    document.getElementById('time-ar').textContent = new Intl.DateTimeFormat('es-AR', optionsAR).format(now);
-    document.getElementById('date-ar').textContent = new Intl.DateTimeFormat('es-AR', dateOptionsAR).format(now);
-
-    // Thailand Time (UTC+7)
-    const optionsTH = {
-        timeZone: 'Asia/Bangkok',
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-    };
-    const dateOptionsTH = {
-        timeZone: 'Asia/Bangkok',
-        weekday: 'long', day: 'numeric', month: 'long'
-    };
-
-    document.getElementById('time-th').textContent = new Intl.DateTimeFormat('en-US', optionsTH).format(now);
-    document.getElementById('date-th').textContent = new Intl.DateTimeFormat('en-US', dateOptionsTH).format(now);
+    const f = (tz, l) => new Intl.DateTimeFormat(l, { timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(now);
+    const fd = (tz, l) => new Intl.DateTimeFormat(l, { timeZone: tz, weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+    document.getElementById('time-ar').innerText = f(userSettings.origin.timezone, 'es-AR');
+    document.getElementById('date-ar').innerText = fd(userSettings.origin.timezone, 'es-AR');
+    document.getElementById('time-th').innerText = f(userSettings.visit.timezone, 'en-US');
+    document.getElementById('date-th').innerText = fd(userSettings.visit.timezone, 'en-US');
 }
 
-function startClockUpdates() {
-    updateClocks();
-    clockInterval = setInterval(updateClocks, 1000);
-}
-
-function stopClockUpdates() {
-    clearInterval(clockInterval);
-}
-
-// --- Enhancements Logic ---
-
-const EXCHANGE_RATES = {
-    ARS: 1390.49, // USD to ARS (Feb 2026 approx)
-    THB: 31.04    // USD to THB (Feb 2026 approx)
-};
-
-const WEATHER_LINKS = {
-    AR: 'https://weather.com/es-US/tiempo/hoy/l/4dd766de52d855ef5c5df5fabeab68ef7fcdb0e705dcc33852c52f3aa7dbbf43',
-    TH: 'https://weather.com/es-US/tiempo/hoy/l/940d0fe0b32980dbe2dceb7c6eea4bb633a96a1de302c4f04d396bfe8b66e214'
-};
-
-async function fetchWeather() {
-    console.log('Fetching weather data...');
-    // Córdoba, AR (-31.417, -64.183) - Higher precision
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=-31.417&longitude=-64.183&current_weather=true')
-        .then(res => res.json())
-        .then(data => {
-            if (data.current_weather) updateWeatherUI('ar', data.current_weather);
-        })
-        .catch(e => console.error('Error AR weather:', e));
-
-    // Bangkok, TH (13.756, 100.501) - Higher precision
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=13.756&longitude=100.501&current_weather=true')
-        .then(res => res.json())
-        .then(data => {
-            if (data.current_weather) updateWeatherUI('th', data.current_weather);
-        })
-        .catch(e => console.error('Error TH weather:', e));
-}
-
-function updateWeatherUI(id, data) {
-    const box = document.getElementById(`weather-${id}`);
-    const iconEl = document.getElementById(`icon-${id}`);
-    if (!box || !iconEl) return;
-
-    const temp = Math.round(data.temperature);
-    const code = data.weathercode;
-    const isDay = data.is_day === 1;
-
-    box.querySelector('.weather-temp').textContent = `${temp}°C`;
-    box.querySelector('.weather-desc').textContent = getWeatherDesc(code);
-
-    // Set background icon
-    iconEl.textContent = getWeatherIcon(code, isDay);
-
-    box.onclick = () => window.open(WEATHER_LINKS[id.toUpperCase()], '_blank');
-}
-
-function getWeatherIcon(code, isDay) {
-    // Mapping codes to Emojis (simplified)
-    if (code <= 1) return isDay ? '☀️' : '🌙'; // Clear
-    if (code <= 3) return '☁️'; // Partly cloudy / Cloudy
-    if (code >= 45 && code <= 48) return '🌫️'; // Fog
-    if (code >= 51 && code <= 67) return '🌧️'; // Rain
-    if (code >= 71 && code <= 77) return '❄️'; // Snow
-    if (code >= 80 && code <= 82) return '🌦️'; // Showers
-    if (code >= 95) return '⛈️'; // Storm
-    return '✨';
-}
-
-function getWeatherDesc(code) {
-    const codes = { 0: 'Despejado', 1: 'Mayormente despejado', 2: 'Parcialmente nublado', 3: 'Nublado', 45: 'Neblina', 48: 'Neblina', 51: 'Llovizna', 61: 'Lluvia ligera', 71: 'Nieve ligera', 95: 'Tormenta' };
-    return codes[code] || 'Estable';
-}
-
-function initConverter() {
-    const inputARS = document.getElementById('input-ars');
-    const inputTHB = document.getElementById('input-thb');
-    const rateAR = document.getElementById('rate-ar');
-    const rateTH = document.getElementById('rate-th');
-
-    rateAR.textContent = `USD/ARS: $${EXCHANGE_RATES.ARS.toLocaleString()}`;
-    rateTH.textContent = `USD/THB: ฿${EXCHANGE_RATES.THB.toLocaleString()}`;
-
-    inputARS.addEventListener('input', (e) => {
-        const value = parseFloat(e.target.value) || 0;
-        const usd = value / EXCHANGE_RATES.ARS;
-        inputTHB.value = (usd * EXCHANGE_RATES.THB).toFixed(2);
-    });
-
-    inputTHB.addEventListener('input', (e) => {
-        const value = parseFloat(e.target.value) || 0;
-        const usd = value / EXCHANGE_RATES.THB;
-        inputARS.value = (usd * EXCHANGE_RATES.ARS).toFixed(2);
-    });
-}
-
-async function updateRates() {
-    console.log('Updating exchange rates...');
-    // Initial UI with hardcoded rates
-    initConverter();
-
-    try {
-        const res = await fetch('https://api.frankfurter.app/latest?from=USD&symbols=THB');
-        const data = await res.json();
-        if (data.rates && data.rates.THB) {
-            EXCHANGE_RATES.THB = data.rates.THB;
-            document.getElementById('rate-th').textContent = `USD/THB: ฿${EXCHANGE_RATES.THB.toLocaleString()}`;
-        }
-    } catch (e) {
-        console.warn('Error fetching rates from Frankfurter:', e);
-    }
-}
-
-// --- Interaction effects ---
-document.addEventListener('mousemove', (e) => {
-    if (appSection.style.display === 'none') return;
-    const cards = document.querySelectorAll('.clock-card');
-    const mouseX = (e.clientX / window.innerWidth - 0.5) * 20;
-    const mouseY = (e.clientY / window.innerHeight - 0.5) * 20;
-
-    cards.forEach(card => {
-        card.style.transform = `translateY(${mouseY}px) rotateX(${-mouseY / 2}deg) rotateY(${mouseX / 2}deg)`;
-    });
+sb.auth.onAuthStateChange((ev, sess) => {
+    if (sess) { authS.style.display = 'none'; appS.style.display = 'block'; syncSettings(); timer = setInterval(update, 1000); }
+    else { appS.style.display = 'block'; appS.style.display = 'none'; authS.style.display = 'block'; clearInterval(timer); }
 });
 
-document.addEventListener('mouseleave', () => {
-    const cards = document.querySelectorAll('.clock-card');
-    cards.forEach(card => {
-        card.style.transform = `translateY(0) rotateX(0) rotateY(0)`;
-    });
+document.addEventListener('mousemove', e => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 15, y = (e.clientY / window.innerHeight - 0.5) * 15;
+    document.querySelectorAll('.clock-card').forEach(c => c.style.transform = `translateY(${y}px) rotateX(${-y / 2}deg) rotateY(${x / 2}deg)`);
 });
