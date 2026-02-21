@@ -1,7 +1,7 @@
 // Supabase Configuration
 const SUPABASE_URL = 'https://czjhlxnypntpbmxispox.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6amhseG55cG50cGJteGlzcG94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTA2MDQsImV4cCI6MjA4NzI2NjYwNH0.Vc_vxRE9LWohrKPQAGiBGP6w6Mj_pUMC63u40aWVl9E';
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // UI Elements
 const authSection = document.getElementById('auth-section');
@@ -33,7 +33,7 @@ loginForm.addEventListener('submit', async (e) => {
     const password = document.getElementById('login-password').value;
     authMessage.textContent = 'Iniciando sesión...';
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
     if (error) {
         authMessage.textContent = error.message;
@@ -51,7 +51,7 @@ signupForm.addEventListener('submit', async (e) => {
     const password = document.getElementById('signup-password').value;
     authMessage.textContent = 'Registrando...';
 
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabaseClient.auth.signUp({ email, password });
 
     if (error) {
         authMessage.textContent = error.message;
@@ -64,11 +64,11 @@ signupForm.addEventListener('submit', async (e) => {
 
 // Logout
 logoutBtn.addEventListener('click', async () => {
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
 });
 
 // Auth State Observer
-supabase.auth.onAuthStateChange((event, session) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
     if (session) {
         authSection.style.display = 'none';
         appSection.style.display = 'block';
