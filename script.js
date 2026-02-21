@@ -138,27 +138,31 @@ const WEATHER_LINKS = {
 };
 
 async function fetchWeather() {
-    try {
-        // Córdoba, AR (-31.4135, -64.1811)
-        const resAR = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-31.41&longitude=-64.18&current_weather=true');
-        const dataAR = await resAR.json();
-        updateWeatherUI('ar', dataAR.current_weather);
+    console.log('Fetching weather data...');
+    // Córdoba, AR (-31.4135, -64.1811)
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=-31.41&longitude=-64.18&current_weather=true')
+        .then(res => res.json())
+        .then(data => {
+            if (data.current_weather) updateWeatherUI('ar', data.current_weather);
+        })
+        .catch(e => console.error('Error AR weather:', e));
 
-        // Bangkok, TH (13.7563, 100.5018)
-        const resTH = await fetch('https://api.open-meteo.com/v1/forecast?latitude=13.75&longitude=100.51&current_weather=true');
-        const dataTH = await resTH.json();
-        updateWeatherUI('th', dataTH.current_weather);
-    } catch (e) {
-        console.error('Error fetching weather:', e);
-    }
+    // Bangkok, TH (13.7563, 100.5018)
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=13.75&longitude=100.51&current_weather=true')
+        .then(res => res.json())
+        .then(data => {
+            if (data.current_weather) updateWeatherUI('th', data.current_weather);
+        })
+        .catch(e => console.error('Error TH weather:', e));
 }
 
 function updateWeatherUI(id, data) {
     const box = document.getElementById(`weather-${id}`);
     if (!box) return;
     box.querySelector('.weather-temp').textContent = `${Math.round(data.temperature)}°C`;
-    box.querySelector('.weather-desc').textContent = getWeatherDesc(data.weathercode);
-    box.addEventListener('click', () => window.open(WEATHER_LINKS[id.toUpperCase()], '_blank'));
+    const desc = getWeatherDesc(data.weathercode);
+    box.querySelector('.weather-desc').textContent = desc;
+    box.onclick = () => window.open(WEATHER_LINKS[id.toUpperCase()], '_blank');
 }
 
 function getWeatherDesc(code) {
@@ -188,16 +192,20 @@ function initConverter() {
     });
 }
 
-// Check for Frankfurter API for more accurate rates (Fallback to hardcoded if fails)
 async function updateRates() {
+    console.log('Updating exchange rates...');
+    // Initial UI with hardcoded rates
+    initConverter();
+
     try {
         const res = await fetch('https://api.frankfurter.app/latest?from=USD&symbols=THB');
         const data = await res.json();
-        if (data.rates.THB) EXCHANGE_RATES.THB = data.rates.THB;
-        // Frankfurter doesn't have ARS usually, keeping hardcoded for ARS or using extra logic if needed
-        initConverter();
+        if (data.rates && data.rates.THB) {
+            EXCHANGE_RATES.THB = data.rates.THB;
+            document.getElementById('rate-th').textContent = `USD/THB: ฿${EXCHANGE_RATES.THB.toLocaleString()}`;
+        }
     } catch (e) {
-        initConverter();
+        console.warn('Error fetching rates from Frankfurter:', e);
     }
 }
 
