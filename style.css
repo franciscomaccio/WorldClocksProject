@@ -19,11 +19,12 @@ body {
     background-color: var(--bg-color);
     color: var(--text-primary);
     font-family: var(--font-main);
-    overflow: hidden;
-    height: 100vh;
+    overflow-y: auto;
+    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
+    padding: 2rem 0;
 }
 
 .bg-gradient {
@@ -46,7 +47,7 @@ body {
 }
 
 header {
-    margin-bottom: 4rem;
+    margin-bottom: 2rem;
 }
 
 header h1 {
@@ -55,6 +56,7 @@ header h1 {
     letter-spacing: -2px;
     background: linear-gradient(to right, #fff, var(--text-secondary));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 0.5rem;
 }
@@ -78,7 +80,7 @@ header p {
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
     border-radius: 24px;
-    padding: 3rem 2rem;
+    padding: 2rem 1.5rem;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
     overflow: hidden;
@@ -129,12 +131,13 @@ header p {
 }
 
 .time-display {
-    font-size: 4.5rem;
+    font-size: 3.8rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
-    margin: 1.5rem 0;
+    margin: 1rem 0;
     background: linear-gradient(135deg, #fff 0%, #aaa 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -145,7 +148,7 @@ header p {
 }
 
 footer {
-    margin-top: 4rem;
+    margin-top: 2rem;
     opacity: 0.5;
     font-size: 0.9rem;
 }
@@ -487,8 +490,8 @@ input:focus {
 
 /* Dashboard Enhancements */
 .card-extra {
-    margin-top: 2rem;
-    padding-top: 2rem;
+    margin-top: 1.2rem;
+    padding-top: 1.2rem;
     border-top: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -502,7 +505,7 @@ input:focus {
     gap: 0.25rem;
     cursor: pointer;
     transition: transform 0.3s;
-    padding: 1.5rem;
+    padding: 1rem;
     border-radius: 24px;
     background: rgba(255, 255, 255, 0.03);
     position: relative;
@@ -574,6 +577,7 @@ input:focus {
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
     -webkit-appearance: none;
+    appearance: none;
     margin: 0;
 }
 
